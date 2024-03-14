@@ -7,7 +7,7 @@ const cors = require("cors"); // Import the cors middleware
 const app = express();
 // Use cors middleware
 app.use(cors());
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3008;
 
 // Database connection
 const sequelize = new Sequelize({
@@ -48,6 +48,11 @@ const userSchema = {
     allowNull: false,
     unique: true,
   },
+  user_password: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+  },
 };
 
 // Create User entity using the schema
@@ -58,7 +63,7 @@ const User = new Entity("User", userSchema);
 // and will not alter the tables if they do exist
 // It will also create the tables with the defined schema
 // it will delete the information in the table
-/*
+
 sequelize
   .sync()
   .then(async () => {
@@ -67,7 +72,7 @@ sequelize
   .catch((error) => {
     console.error("Error synchronizing database:", error);
   });
-*/
+
 // Express middleware for parsing JSON
 app.use(express.json());
 
@@ -114,6 +119,25 @@ app.get("/users", async (req, res) => {
   }
 });
 
+app.post("/login", async (req, res) => {
+  try {
+    const { user_name, user_password } = req.body;
+    console.log("req.body");
+    console.log(req.body);
+    const user = await User.model.findOne({
+      where: { user_name, user_password },
+    });
+
+    if (user) {
+      res.status(200).json({ message: "Login successful", user });
+    } else {
+      res.status(401).json({ error: "Invalid credentials" });
+    }
+  } catch (error) {
+    console.error("Error authenticating user:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

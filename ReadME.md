@@ -9,3 +9,4 @@ Now, you have three endpoints:
 POST /users: Creates a new user.
 GET /users/:id: Retrieves a user by ID.
 GET /users: Retrieves all users.
+GET /users: Retrieves all users.
