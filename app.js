@@ -138,6 +138,22 @@ app.post("/login", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+app.post("/register", async (req, res) => {
+  try {
+    const { user_email, user_name, user_password } = req.body;
+    const newUser = await User.model.create({
+      user_email,
+      user_name,
+      user_password,
+    });
+    res.status(201).json(newUser);
+  } catch (error) {
+    console.error("Error registering user:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
