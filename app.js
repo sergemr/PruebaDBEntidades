@@ -31,6 +31,33 @@ class Entity {
 }
 
 // Define a simple schema for the User entity
+const noteSchema = {
+  note_id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+    allowNull: false,
+  },
+  user_id: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: false,
+  },
+  note: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: false,
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
+  },
+};
+
 const userSchema = {
   user_id: {
     type: DataTypes.INTEGER,
@@ -51,12 +78,21 @@ const userSchema = {
   user_password: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true,
+    unique: false,
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
   },
 };
 
 // Create User entity using the schema
 const User = new Entity("User", userSchema);
+const Note = new Entity("Note", noteSchema);
 
 // Synchronize the database with the defined models
 // This will create the tables if they do not exist
@@ -64,15 +100,18 @@ const User = new Entity("User", userSchema);
 // It will also create the tables with the defined schema
 // it will delete the information in the table
 
-sequelize
-  .sync()
-  .then(async () => {
-    await User.sync();
-  })
-  .catch((error) => {
-    console.error("Error synchronizing database:", error);
-  });
-
+const syncDatabase = async () => {
+  sequelize
+    .sync()
+    .then(async () => {
+      await User.sync();
+      await Note.sync();
+    })
+    .catch((error) => {
+      console.error("Error synchronizing database:", error);
+    });
+};
+syncDatabase();
 // Express middleware for parsing JSON
 app.use(express.json());
 
@@ -153,7 +192,22 @@ app.post("/register", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
+app.delete("/users/:id", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.model.findByPk(userId);
+    console.log("user");
+    if (user) {
+      await user.destroy();
+      res.status(200).json({ message: "User deleted successfully" });
+    } else {
+      res.status(404).json({ error: "User not found" });
+    }
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

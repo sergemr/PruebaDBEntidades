@@ -1,7 +1,7 @@
 npm install express sequelize sequelize-cli mysql2
 npm install cors
-
-npx sequelize-cli init
+npm install nodemon
+in
 This will create a config, migrations, models, and seeders folder in your project.
 
 Now, you have three endpoints:
