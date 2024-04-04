@@ -3,12 +3,14 @@
 const express = require("express");
 const { Sequelize, DataTypes } = require("sequelize");
 const cors = require("cors"); // Import the cors middleware
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 // Use cors middleware
 app.use(cors());
 const PORT = process.env.PORT || 3008;
-
+const secretKey = "dksahdjash98sd(*ASDASDASDKOSA";
 // Database connection
 const sequelize = new Sequelize({
   dialect: "mysql",
@@ -29,6 +31,35 @@ class Entity {
     console.log(`Table for ${this.name} synchronized`);
   }
 }
+const verifyToken = (req, res, next) => {
+  // Get the token from the request headers or query parameters
+  const token = req.headers["authorization"] || req.query.token;
+
+  if (!token) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+  console.log("token");
+
+  const tokenWithoutBearer = token.split(" ")[1];
+  console.log(token);
+  console.log("tokenWithoutBearer");
+  console.log(tokenWithoutBearer);
+  // Verify the token
+  jwt.verify(tokenWithoutBearer, secretKey, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    // Check if the token has expired
+    if (decoded.exp <= Math.floor(Date.now() / 1000)) {
+      return res.status(401).json({ error: "Token has expired" });
+    }
+
+    // Attach the decoded user ID to the request object for further use
+    req.userId = decoded.userId;
+    next(); // Move to the next middleware
+  });
+};
 
 // Define a simple schema for the User entity
 const noteSchema = {
@@ -111,18 +142,28 @@ const syncDatabase = async () => {
       console.error("Error synchronizing database:", error);
     });
 };
-syncDatabase();
+//syncDatabase();
 // Express middleware for parsing JSON
 app.use(express.json());
 
 // Express route to create a new user
 app.post("/users", async (req, res) => {
   console.log("req.body");
+  console.log("req.body");
+  console.log("req.body");
+
   console.log(req.body);
   try {
-    const { user_email } = req.body;
-    const { user_name } = req.body;
-    const newUser = await User.model.create({ user_email, user_name });
+    const { user_email, user_name, user_password } = req.body;
+
+    // Hash the password before storing it in the database
+    const hashedPassword = await bcrypt.hash(user_password, 10); // 10 is the saltRounds
+
+    const newUser = await User.model.create({
+      user_email,
+      user_name,
+      user_password: hashedPassword,
+    });
     res.status(201).json(newUser);
   } catch (error) {
     console.error("Error creating user:", error);
@@ -148,7 +189,7 @@ app.get("/users/:id", async (req, res) => {
 });
 
 // Express route to get all users
-app.get("/users", async (req, res) => {
+app.get("/users", verifyToken, async (req, res) => {
   try {
     const allUsers = await User.model.findAll();
     res.status(200).json(allUsers);
@@ -158,20 +199,41 @@ app.get("/users", async (req, res) => {
   }
 });
 
+// Login endpoint
 app.post("/login", async (req, res) => {
   try {
     const { user_name, user_password } = req.body;
     console.log("req.body");
     console.log(req.body);
-    const user = await User.model.findOne({
-      where: { user_name, user_password },
+    let user_email = user_name;
+    let user = await User.model.findOne({
+      where: { user_email },
     });
 
-    if (user) {
-      res.status(200).json({ message: "Login successful", user });
-    } else {
-      res.status(401).json({ error: "Invalid credentials" });
+    if (!user) {
+      return res.status(401).json({ error: "Invalid credentials" });
     }
+    console.log(user);
+    // Compare the provided password with the hashed password stored in the database
+    const match = await bcrypt.compare(user_password, user.user_password);
+
+    if (!match) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    // Define token expiration time (e.g., 1 hour)
+    const expirationTime = 3600; // in seconds
+
+    // Generate JWT token with expiration time
+    const token = jwt.sign(
+      { userId: user.user_id, timeIssued: Date.now() }, // payload
+      secretKey,
+      { expiresIn: expirationTime } // options
+    );
+    user.token = token;
+    console.log("user");
+    console.log(user);
+    res.status(200).json({ message: "Login successful1", user, token });
   } catch (error) {
     console.error("Error authenticating user:", error);
     res.status(500).json({ error: "Internal Server Error" });
@@ -179,12 +241,17 @@ app.post("/login", async (req, res) => {
 });
 
 app.post("/register", async (req, res) => {
+  console.log(req.body);
   try {
     const { user_email, user_name, user_password } = req.body;
+
+    // Hash the password before storing it in the database
+    const hashedPassword = await bcrypt.hash(user_password, 10); // 10 is the saltRounds
+
     const newUser = await User.model.create({
       user_email,
       user_name,
-      user_password,
+      user_password: hashedPassword,
     });
     res.status(201).json(newUser);
   } catch (error) {
@@ -192,6 +259,7 @@ app.post("/register", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 app.delete("/users/:id", async (req, res) => {
   try {
     const userId = req.params.id;

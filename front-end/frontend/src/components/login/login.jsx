@@ -13,6 +13,9 @@ function Login() {
         user_name: username,
         user_password: password,
       });
+      console.log(response.data);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+      localStorage.setItem("token", JSON.stringify(response.data.token));
       setMessage(response.data.message);
       // Handle successful login, e.g., store user token in local storage
     } catch (error) {

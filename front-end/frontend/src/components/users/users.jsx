@@ -4,11 +4,20 @@ import axios from "axios";
 function UserList() {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState(null);
+  const user = JSON.parse(localStorage.getItem("user"));
+  const token = JSON.parse(localStorage.getItem("token"));
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await axios.get("http://localhost:3008/users");
+        console.log("user", user);
+        // Make the GET request with the token in the headers
+        const response = await axios.get("http://localhost:3008/users", {
+          headers: {
+            Authorization: `Bearer ${token}`, // Attach the token to the Authorization header
+          },
+        });
+
         setUsers(response.data);
       } catch (error) {
         setError("Error fetching users");
