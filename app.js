@@ -222,7 +222,7 @@ app.post("/login", async (req, res) => {
     }
 
     // Define token expiration time (e.g., 1 hour)
-    const expirationTime = 3600; // in seconds
+    const expirationTime = 300; // in seconds
 
     // Generate JWT token with expiration time
     const token = jwt.sign(
